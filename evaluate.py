@@ -22,10 +22,10 @@ from pathlib import Path
 import numpy as np
 from scipy.stats import wilcoxon
 
-from core import (iou, pointing, raster, word_feat, b1_at,
+from core import (iou, pointing, raster, word_feat, b1_at, WORD_TERMS,
                          TUNE_SIGMAS, tune_thresholds)
 from selector import train_model, predict_raw, blur_norm
-from masking_control import mask_spatial
+from masking_control import mask_spatial, SPATIAL_IDX
 
 # Cross-attention with FOURIER position, not raw. The 2x2 ablation -- once completed and
 # swept over seeds -- put crossattn+raw behind crossattn+fourier on both metrics in 5/5
@@ -36,7 +36,7 @@ from masking_control import mask_spatial
 FUSION, POS_MODE = "crossattn", "fourier"
 
 
-def run(cache, epochs, seed=0, external=None, split_seed=0):
+def run(cache, epochs, seed=0, external=None, split_seed=0, train_frac=None, chain_seed=0):
     import torch
     recs, labels = torch.load(cache, weights_only=False)
     li = {L: i for i, L in enumerate(labels)}
@@ -62,6 +62,19 @@ def run(cache, epochs, seed=0, external=None, split_seed=0):
     # positive mention. Evaluation keeps every annotated instance so that linker coverage and
     # the fallback behaviour stay visible.
     tr_fit = [it for it in tr if len(it[1])]
+    if train_frac is not None:
+        # Training-set-size sensitivity. Each fraction is a prefix of one shuffled patient
+        # order, so within a chain the subsamples nest: 10% subset of 25% subset of 50%. The
+        # unit is the patient, not the instance, so no patient straddles the boundary.
+        sub_of = {r["rid"]: r["subject"] for r in recs}
+        # eligible = patients contributing a mention-resolved training instance, the set the
+        # fractions are defined over; the training split holds more patients than that.
+        tp = np.array(sorted({sub_of[it[5][0]] for it in tr_fit}))
+        np.random.default_rng(chain_seed).shuffle(tp)
+        keep = set(tp[:max(1, int(round(train_frac * len(tp))))])
+        tr_fit = [it for it in tr_fit if sub_of[it[5][0]] in keep]
+        print(f"train_frac={train_frac} chain={chain_seed}: {len(keep)} of {len(tp)} "
+              f"eligible training patients, {len(tr_fit)} instances", flush=True)
     print(f"fitting on {len(tr_fit)} of {len(tr)} training instances", flush=True)
     print(f"instances train/val/test = {len(tr)}/{len(va)}/{len(te)}, {len(labels)} labels "
           f"(split_seed={split_seed}, train seed={seed})", flush=True)
@@ -84,6 +97,25 @@ def run(cache, epochs, seed=0, external=None, split_seed=0):
                             fusion=FUSION, pos_mode=POS_MODE, seed=seed)
 
     shuf_rng = np.random.default_rng(2)
+    # A second fixed stream, so permuting the temporal rows does not consume the position
+    # control's draws and shift a comparison that is supposed to be identical across seeds.
+    tshuf_rng = np.random.default_rng(3)
+
+    # The reduced query keeps the four directional indicators and drops the six that qualify
+    # extent, size or character. WORD_TERMS order: left, right, bilateral, upper, lower,
+    # middle, retrocardiac, small, large, diffuse.
+    Q4 = (0, 1, 3, 4)
+
+    def keep4(wf):
+        v = np.zeros_like(wf)
+        v[list(Q4)] = wf[list(Q4)]
+        return v
+
+    print(f"training four-indicator candidate (query = {[WORD_TERMS[i] for i in Q4]})...",
+          flush=True)
+    net_q4 = train_model([(f, m, e, l, keep4(wf), k) for f, m, e, l, wf, k in tr_fit],
+                         labels, use_position=True, epochs=epochs, use_text=True,
+                         fusion=FUSION, pos_mode=POS_MODE, seed=seed)
 
     def raw_for(method, item):
         f, m, e, l, wf, _key = item
@@ -98,6 +130,12 @@ def run(cache, epochs, seed=0, external=None, split_seed=0):
         if method == "final_wordmask":
             return predict_raw(net_final, f, m, l, use_position=True, use_text=True,
                                wf=mask_spatial(wf), pos_mode=POS_MODE)
+        if method == "final_tempshuf":
+            return predict_raw(net_final, f, m, l, use_position=True, use_text=True,
+                               wf=wf, pos_mode=POS_MODE, shuffle_temporal=True, rng=tshuf_rng)
+        if method == "q4":
+            return predict_raw(net_q4, f, m, l, use_position=True, use_text=True,
+                               wf=keep4(wf), pos_mode=POS_MODE)
 
     def cache_raw(items, method):
         return [(raw_for(method, it), raster(it[2])) for it in items]
@@ -151,6 +189,8 @@ def run(cache, epochs, seed=0, external=None, split_seed=0):
     va_fn, te_fn = cache_raw(va, "final"), cache_raw(te, "final")
     te_shuf = cache_raw(te, "final_posshuf")
     te_mask = cache_raw(te, "final_wordmask")
+    te_tshuf = cache_raw(te, "final_tempshuf")
+    va_q4, te_q4 = cache_raw(va, "q4"), cache_raw(te, "q4")
 
     # B1 (Lanfredi's fixed-1.5s gate) is scored HERE, on the same test instances, with
     # the SAME (sigma, threshold) search the learned models get, rather than pinned
@@ -184,6 +224,69 @@ def run(cache, epochs, seed=0, external=None, split_seed=0):
     # settings, only the input differs, per the established discipline.
     shv = metric_at(te_shuf, t_fn, s_fn, "iou"); psh = metric_at(te_shuf, t_fn, s_fn, "pg")
     mkv = metric_at(te_mask, t_fn, s_fn, "iou"); pmk = metric_at(te_mask, t_fn, s_fn, "pg")
+    tsv = metric_at(te_tshuf, t_fn, s_fn, "iou"); pts = metric_at(te_tshuf, t_fn, s_fn, "pg")
+    # the reduced query is a trained model, not a perturbation, so it gets its own search
+    s_q4, t_q4 = tune(va_q4)
+    q4v = metric_at(te_q4, t_q4, s_q4, "iou"); pq4 = metric_at(te_q4, t_q4, s_q4, "pg")
+    print(f"val-tuned four-indicator (sigma,thr)={s_q4, t_q4}")
+
+    # ---- record substitution -------------------------------------------------------------
+    # Does the target's own gaze-mention record carry information that a coarse finding and
+    # directional match cannot supply? Each test instance is re-scored on other patients'
+    # records that match it exactly on finding and on the mention indicators. If the match
+    # were sufficient, substitution would cost nothing.
+    import hashlib
+
+    sub_of = {r["rid"]: r["subject"] for r in recs}
+
+    def group_key(it):
+        # Matched on finding and on the location indicators the package already names as
+        # spatial. The size and character terms describe the finding rather than where it is,
+        # so including them splits the groups on something the substitution is not about.
+        return (it[3], tuple(it[4][SPATIAL_IDX].tolist()))
+
+    pool = {}
+    for it in tr_fit:
+        pool.setdefault(group_key(it), []).append(it)
+    # A fixed hash, so which donors are used does not depend on dict or file order.
+    for v in pool.values():
+        v.sort(key=lambda d: hashlib.sha256(str(d[5][0]).encode()).hexdigest())
+
+    def donors(it, K):
+        same = pool.get(group_key(it), [])
+        out = [d for d in same if sub_of.get(d[5][0]) != sub_of.get(it[5][0])]
+        return out[:min(K, len(out))]
+
+    def sub_raw(it, K):
+        ds = donors(it, K)
+        if not ds:
+            return None
+        f, m, e, l, wf, _k = it
+        # the donor supplies the record -- fixations and mention timing -- while the query
+        # stays the target's; they agree by construction on finding and indicators anyway
+        maps = [predict_raw(net_final, d[0], d[1], l, use_position=True, use_text=True,
+                            wf=wf, pos_mode=POS_MODE) for d in ds]
+        return np.mean(maps, 0)
+
+    K = 8   # selected on validation from {1, 2, 4, 8} by pointing accuracy
+    va_ex = [it for it in va if len(it[1]) and donors(it, K)]
+    te_ex = [it for it in te if len(it[1]) and donors(it, K)]
+    print(f"\nrecord substitution: {len(te_ex)}/{len(te)} test and {len(va_ex)}/{len(va)} "
+          f"validation instances have an exact-match donor (K={K})", flush=True)
+
+    va_sub = [(sub_raw(it, K), raster(it[2])) for it in va_ex]
+    te_sub = [(sub_raw(it, K), raster(it[2])) for it in te_ex]
+    s_sub, t_sub = tune(va_sub)
+    sub_iou = metric_at(te_sub, t_sub, s_sub, "iou")
+    sub_pg = metric_at(te_sub, t_sub, s_sub, "pg")
+    # the target row is the shipped selector on the same instances, so the pair differs in
+    # the record alone rather than in the cohort as well
+    tgt = [(raw_for("final", it), raster(it[2])) for it in te_ex]
+    tgt_iou = metric_at(tgt, t_fn, s_fn, "iou")
+    tgt_pg = metric_at(tgt, t_fn, s_fn, "pg")
+    print(f"SUBST n={len(te_ex)} target={np.nanmean(tgt_pg):.4f}/{np.nanmean(tgt_iou):.4f} "
+          f"donors={np.nanmean(sub_pg):.4f}/{np.nanmean(sub_iou):.4f} "
+          f"(sigma,thr) target={s_fn, t_fn} donors={s_sub, t_sub}", flush=True)
 
     def paired_iou(a, b):
         ok = np.isfinite(a) & np.isfinite(b)
@@ -316,9 +419,7 @@ def run(cache, epochs, seed=0, external=None, split_seed=0):
     # conditions -- so the median cannot register the effect no matter how large it is.
     # Gating on it discarded evidence that is significant in 10/10 runs (5 training
     # seeds x 5 patient splits, p <= 6e-20). This is the same median-vs-mean correction
-    # already applied to the binary pointing metric, and the reasoning was recorded in
-    # spec section 5 before these runs, not after: it is a fix to a statistic that was
-    # always wrong for this cell, not a threshold moved to obtain a pass.
+    # the binary pointing metric already uses.
     c3 = (d3m > 0 and p3 < 0.05) or (dp3 > 0 and pp3 < 0.05)
     print(f"\n--- VERDICT: (1) beats Temporal-only = {c1}, (2) collapses on shuffle = {c2}, "
           f"(3) degrades on masking = {c3} ---")
@@ -414,8 +515,15 @@ def run(cache, epochs, seed=0, external=None, split_seed=0):
     # copy of the scoring path drifting away from this one (see cluster_stats.py). The
     # CLI ignores the return value; nothing above changes.
     return {"keys": [it[5] for it in te],
-            "iou": {"b1": b1v, "r1": r1v, "fn": fnv, "shuf": shv, "mask": mkv},
-            "pg": {"b1": pb1, "r1": pr1, "fn": pfn, "shuf": psh, "mask": pmk}}
+            "iou": {"b1": b1v, "r1": r1v, "fn": fnv, "shuf": shv, "mask": mkv,
+                    "tshuf": tsv, "q4": q4v},
+            "pg": {"b1": pb1, "r1": pr1, "fn": pfn, "shuf": psh, "mask": pmk,
+                   "tshuf": pts, "q4": pq4},
+            "subst": {"n": len(te_ex),
+                      "target_pg": float(np.nanmean(tgt_pg)),
+                      "target_iou": float(np.nanmean(tgt_iou)),
+                      "donor_pg": float(np.nanmean(sub_pg)),
+                      "donor_iou": float(np.nanmean(sub_iou))}}
 
 
 def _selfcheck():

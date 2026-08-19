@@ -175,18 +175,28 @@ def train_model(tr, labels, use_position, epochs, use_text=False, fusion="concat
 
 
 def predict_raw(net, fix, ment, lab, use_position, shuffle_pos=False, rng=None,
-                use_text=False, wf=None, pos_mode="fourier", return_weights=False):
+                use_text=False, wf=None, pos_mode="fourier", return_weights=False,
+                shuffle_temporal=False):
     """Attention-weighted point grid BEFORE blur/normalize -- lets sigma be swept
     cheaply afterward (no repeated forward passes) via blur_norm()."""
     import torch
     f = fix
-    if shuffle_pos:
-        f = fix.copy()
-        perm = rng.permutation(len(f))
-        f[:, :2] = fix[perm, :2]     # break position<->identity correspondence only
     posf = pos_feat(f[:, :2], pos_mode) if use_position else np.zeros((len(f), 0), np.float32)
+    if shuffle_pos:
+        # Permute the coordinate rows the scorer reads while the splat stays at the recorded
+        # coordinates. Permuting the coordinates themselves and splatting at the permuted ones
+        # leaves the weight computed for a position landing on that same position, so the map
+        # remains a function of position and the control barely bites; this breaks the
+        # correspondence the model is supposed to depend on.
+        posf = posf[rng.permutation(len(f))]
+    tf = align_feats(f, ment)
+    if shuffle_temporal:
+        # The complement of shuffle_pos: keep every coordinate where it was recorded and
+        # permute the mention-offset and kinematic rows instead, so a fixation is scored on
+        # another fixation's timing and dynamics while the map still lands on real fixations.
+        tf = tf[rng.permutation(len(tf))]
     with torch.no_grad():
-        a = net.attn(torch.from_numpy(align_feats(f, ment)), lab, posf, wf).numpy()
+        a = net.attn(torch.from_numpy(tf), lab, posf, wf).numpy()
     # return_weights hands back the per-fixation attention itself rather than the splat, so a
     # fixation-level diagnostic reads exactly the selection the heatmap was built from.
     return a if return_weights else _raw_grid(f[:, 0], f[:, 1], a)

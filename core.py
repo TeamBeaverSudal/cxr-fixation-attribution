@@ -123,8 +123,13 @@ def extract(root, limit):
                             "mentions": mentions,   # each: (gate_start, sent_start, sent_end)
                             "mtext": mtext})        # matched sentence texts (for word features)
             if per:
+                # Sentence starts travel with the record so a gate wider than LOOKBACK can be
+                # rebuilt later. The cached gate is max(sent_start - LOOKBACK, prev_start),
+                # which loses prev_start wherever the clip did not bind, and with it any
+                # window past LOOKBACK -- including the lookback sweep's upper end.
                 out.append({"rid": rid, "subject": subj.get(rid, rid),
-                            "fix": fixfeat, "labels": per})
+                            "fix": fixfeat, "labels": per,
+                            "sents": [(s, e) for _txt, s, e in sents]})
         except Exception as ex:
             print(f"skip {rid}: {type(ex).__name__}: {ex}")
     print(f"labels seen: {sorted(seen)}")
