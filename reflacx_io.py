@@ -21,6 +21,8 @@ mass-in-lesion, time-to-first-hit.
 Run `python reflacx_io.py` for a synthetic self-check (no dataset needed).
 """
 
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 from scipy.ndimage import gaussian_filter
@@ -34,6 +36,23 @@ LESION_TERMS = ("nodule", "mass", "opacit", "consolidat", "effusion",
 
 
 # ---------------------------------------------------------------- data access
+
+def find_records(root):
+    """{reflacx_id: {filename: path}} for dirs holding gaze or fixation csvs.
+
+    Handles both <root>/main_data/<id>/... and <root>/<id>/... ;
+    raw gaze may live in a sibling gaze_data/<id>/gaze.csv (official layout).
+    """
+    recs = {}
+    for pat in ("*", "*/*"):
+        for d in Path(root).glob(pat):
+            if not d.is_dir():
+                continue
+            present = {f: d / f for f in RECORD_FILES if (d / f).exists()}
+            if "fixations.csv" in present or "gaze.csv" in present:
+                recs.setdefault(d.name, {}).update(present)
+    return recs
+
 
 def _col(df, *cands):
     for c in cands:
