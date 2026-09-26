@@ -2,3 +2,7 @@ __pycache__/
 *.pyc
 align.pt
 *.log
+.venv/
+runs/
+checkpoints/
+*.pkl
