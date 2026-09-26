@@ -1,4 +1,4 @@
-"""Finding-conditioned fixation selector used in the camera-ready analyses."""
+"""Finding-conditioned fixation selector used in the reference study."""
 
 import numpy as np
 

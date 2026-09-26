@@ -1,8 +1,8 @@
-# Camera-ready results
+# Reference study results
 
-`results/medai2026-camera-ready.json` is the quantitative contract for the
-MedAI 2026 paper. It stores execution-level precision; the paper displays three
-decimals.
+`results/study-results.json` is the exact quantitative registry for the
+reference REFLACX study. It preserves execution-level precision; the associated
+publication rounds displayed values to three decimals.
 
 ## Estimator
 
@@ -17,21 +17,21 @@ decimals.
 - Training-size analysis: average five optimizer seeds within each of five
   patient-subsample chains, then summarize the chain means.
 
-## Paper mapping
+## Registry mapping
 
-| Paper element | Registry field | Result |
+| Analysis | Registry field | Result |
 |---|---|---|
 | Cohort | `cohort` | 987 test instances, 398 patients |
-| Table I | `table_1` | nine structured and learned rows |
-| Table II | `table_2` | five independently calibrated lookbacks; validation selects 3.0 s |
-| Primary comparison | `primary_inference.learned_minus_structured_3_0s` | pointing +0.0353 [0.0067, 0.0634], `p=0.0766815`; IoU +0.0035 [-0.0034, 0.0102], `p=0.841748` |
+| Structured and learned selectors | `table_1` | nine common-renderer comparisons |
+| Temporal lookback sweep | `table_2` | five calibrated lookbacks; validation selects 3.0 s |
+| Primary paired inference | `primary_inference.learned_minus_structured_3_0s` | pointing +0.0353 [0.0067, 0.0634], `p=0.0766815`; IoU +0.0035 [-0.0034, 0.0102], `p=0.841748` |
 | Record substitution | `record_substitution` | 948 instances / 389 patients; pointing reduction 0.2816; IoU reduction 0.0769 |
-| Table III | `table_3` | six five-seed selector and feature-control conditions |
-| Four-vs-ten indicator comparison | `primary_inference.four_indicator_minus_ten_indicator` | pointing +0.0128 [0.0006, 0.0250]; IoU -0.0010 [-0.0042, 0.0023] |
-| Table IV | `table_4` | 10%, 25%, 50%, and 100% training fractions |
+| Feature controls | `table_3` | six five-seed selector and perturbation conditions |
+| Four-vs-ten indicators | `primary_inference.four_indicator_minus_ten_indicator` | pointing +0.0128 [0.0006, 0.0250]; IoU -0.0010 [-0.0042, 0.0023] |
+| Training-size sensitivity | `table_4` | 10%, 25%, 50%, and 100% training fractions |
 | Patient partitions | `patient_partitions` | pointing differences +0.0167 to +0.0356; IoU +0.0002 to +0.0122 |
-| Figure 2 | `figure_2` | qualitative-case IoUs; not an inferential sample |
+| Qualitative examples | `figure_2` | example-case IoUs; not an inferential sample |
 
-`verify_paper.py` checks these fields against an independent set of expected
-values and can verify the exact final-PDF hash. It does not replace a model
-rerun from credentialed source data.
+`verify_results.py` checks these fields against independently encoded expected
+values and can also verify the associated publication's exact PDF hash. This
+offline validation does not replace a model rerun from credentialed source data.

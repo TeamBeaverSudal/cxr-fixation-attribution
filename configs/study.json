@@ -1,5 +1,5 @@
 {
-  "study_id": "medai2026-finding-level-gaze-targets",
+  "study_id": "finding-level-gaze-targets-reflacx",
   "title": "From Complete Scanpaths to Finding-Level Gaze Targets in Chest Radiography: Structured Cues and Learned Reweighting",
   "setting": "offline_complete_scanpath",
   "task": "finding_conditioned_fixation_reweighting_and_localization_map_construction",
@@ -31,6 +31,6 @@
     "patient_partitions": "complete_five_seed_pipeline_per_partition_kept_separate",
     "training_fraction": "five_optimizer_seeds_within_each_of_five_patient_subsample_chains"
   },
-  "result_registry": "results/medai2026-camera-ready.json",
+  "result_registry": "results/study-results.json",
   "deployment_commit": "45ada8abc9b7e3ec98b37b4dcb58f0521c67cef8"
 }

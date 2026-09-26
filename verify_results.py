@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Validate the MedAI 2026 camera-ready quantitative contract.
+"""Validate the frozen reference-study results and publication linkage.
 
-This is an offline artifact check. It compares the publication-safe aggregate
-with independently encoded camera-ready expectations and checks the design
-invariants that caused the previous repository mismatch. Supplying ``--pdf``
-also verifies the exact camera-ready PDF hash and key printed tokens.
+This offline check compares the public aggregate with independently encoded
+expectations and verifies the study's cohort, estimators, controls, and
+sensitivity analyses. Supplying ``--pdf`` also verifies the exact associated
+publication PDF hash and key printed tokens.
 
 Model reruns from credentialed data are documented in docs/REPRODUCIBILITY.md.
 """
@@ -22,21 +22,21 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parent
-DEFAULT_RESULTS = ROOT / "results" / "medai2026-camera-ready.json"
-FINAL_PDF_SHA256 = "0b6fe9d8d4eee8dbae6b4e62f4dd28b2be25b9add928eff97abdd98710273728"
-FINAL_TITLE = (
+DEFAULT_RESULTS = ROOT / "results" / "study-results.json"
+ASSOCIATED_PDF_SHA256 = "0b6fe9d8d4eee8dbae6b4e62f4dd28b2be25b9add928eff97abdd98710273728"
+PUBLICATION_TITLE = (
     "From Complete Scanpaths to Finding-Level Gaze Targets in Chest Radiography: "
     "Structured Cues and Learned Reweighting"
 )
 
 
 # These values are intentionally independent of the JSON registry. A changed
-# result artifact must therefore update an explicit paper contract, not merely
+# result artifact must therefore update an explicit study contract, not merely
 # rewrite the file that the checker reads.
 EXPECTED = {
-    "paper.title": FINAL_TITLE,
-    "paper.pdf_sha256": FINAL_PDF_SHA256,
-    "paper.pages": 7,
+    "associated_publication.title": PUBLICATION_TITLE,
+    "associated_publication.pdf_sha256": ASSOCIATED_PDF_SHA256,
+    "associated_publication.pages": 7,
     "estimator.optimizer_seeds": [0, 1, 2, 3, 4],
     "estimator.primary_estimand": "instance_weighted_mean_difference",
     "estimator.bootstrap.unit": "patient",
@@ -148,7 +148,7 @@ def validate_registry(data):
         passed += require(observed == expected, f"{path}: {observed!r} != {expected!r}", failures)
 
     got = [(r["method"], r["pointing"], r["iou"]) for r in data.get("table_1", [])]
-    passed += require(got == EXPECTED_TABLE_1, "Table I does not match the camera-ready contract", failures)
+    passed += require(got == EXPECTED_TABLE_1, "structured/learned comparison changed", failures)
 
     got = [
         (r["lookback_seconds"], r["validation_iou"], r["test_pointing"], r["test_iou"])
@@ -187,7 +187,7 @@ def validate_pdf(pdf_path):
     failures = []
     passed = 0
     digest = hashlib.sha256(pdf_path.read_bytes()).hexdigest()
-    passed += require(digest == FINAL_PDF_SHA256, f"PDF SHA-256 {digest} != frozen camera-ready hash", failures)
+    passed += require(digest == ASSOCIATED_PDF_SHA256, f"PDF SHA-256 {digest} != associated publication hash", failures)
 
     pdftotext = shutil.which("pdftotext")
     if pdftotext is None:
@@ -235,7 +235,7 @@ def main():
         for failure in failures:
             print(f"  - {failure}", file=sys.stderr)
         return 1
-    print(f"PASS: {passed} camera-ready contract assertions")
+    print(f"PASS: {passed} study-result contract assertions")
     return 0
 
 

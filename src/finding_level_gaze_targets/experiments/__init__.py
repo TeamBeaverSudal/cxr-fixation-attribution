@@ -1,1 +1,1 @@
-"""Analyses reported in the MedAI 2026 camera-ready paper."""
+"""Primary and controlled analyses for finding-level gaze targets."""

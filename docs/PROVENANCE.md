@@ -1,6 +1,6 @@
 # Execution provenance
 
-The camera-ready aggregate was produced on 2026-08-18 from implementation
+The reference-study aggregate was produced on 2026-08-18 from implementation
 commit `45ada8abc9b7e3ec98b37b4dcb58f0521c67cef8`.
 
 | Analysis | Completed PBS job | Executed source SHA-256 |
@@ -12,7 +12,7 @@ commit `45ada8abc9b7e3ec98b37b4dcb58f0521c67cef8`.
 
 The completed strict aggregate has SHA-256
 `e8e54ebc4ad4d83cef88bfd18c487b94267c9b78c85d6982262bf6f48758a71a`.
-The final camera-ready PDF audited against it has SHA-256
+The associated publication PDF audited against it has SHA-256
 `0b6fe9d8d4eee8dbae6b4e62f4dd28b2be25b9add928eff97abdd98710273728`.
 
 The public package uses descriptive module and project names, so its file hashes

@@ -1,12 +1,13 @@
 {
   "schema_version": "1.0",
-  "status": "camera_ready_final",
+  "status": "reference_results",
   "project": {
     "name": "Finding-Level Gaze Targets",
     "python_package": "finding_level_gaze_targets",
     "repository": "https://github.com/TeamBeaverSudal/cxr-fixation-attribution"
   },
-  "paper": {
+  "associated_publication": {
+    "status": "submission_candidate",
     "title": "From Complete Scanpaths to Finding-Level Gaze Targets in Chest Radiography: Structured Cues and Learned Reweighting",
     "venue": "IEEE MedAI 2026",
     "pdf_sha256": "0b6fe9d8d4eee8dbae6b4e62f4dd28b2be25b9add928eff97abdd98710273728",

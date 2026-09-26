@@ -5,7 +5,7 @@ from finding_level_gaze_targets.reporting.registry import validate_registry
 
 
 ROOT = Path(__file__).resolve().parents[1]
-RESULTS = ROOT / "results" / "medai2026-camera-ready.json"
+RESULTS = ROOT / "results" / "study-results.json"
 
 
 def load_results():
@@ -16,7 +16,7 @@ def test_registry_is_valid():
     assert validate_registry(load_results()) == []
 
 
-def test_primary_inference_matches_camera_ready_paper():
+def test_primary_inference_matches_reported_study():
     data = load_results()
     comparison = data["primary_inference"]["learned_minus_structured_3_0s"]
     assert comparison["pointing"] == {

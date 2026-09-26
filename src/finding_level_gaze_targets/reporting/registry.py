@@ -1,4 +1,4 @@
-"""Load, validate, and summarize the camera-ready aggregate result registry."""
+"""Load, validate, and summarize the reference-study result registry."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ def repository_root() -> Path:
 
 
 def default_registry() -> Path:
-    return repository_root() / "results" / "medai2026-camera-ready.json"
+    return repository_root() / "results" / "study-results.json"
 
 
 def load_registry(path: Path | None = None) -> dict:
@@ -62,7 +62,7 @@ def summary(data: dict) -> str:
     learned = table_1["ten_indicator_learned_five_seed_mean"]
     inference = data["primary_inference"]["learned_minus_structured_3_0s"]
     return (
-        "MedAI 2026 finding-level gaze targets (987 instances; 398 patients)\n"
+        "Finding-level gaze targets (987 instances; 398 patients)\n"
         f"  structured 3.0 s: PG {structured['pointing']:.4f}; IoU {structured['iou']:.4f}\n"
         f"  learned five-seed: PG {learned['pointing']:.4f}; IoU {learned['iou']:.4f}\n"
         f"  learned - structured: PG {inference['pointing']['difference']:+.4f}; "
@@ -79,7 +79,7 @@ def main() -> None:
     errors = validate_registry(data)
     if errors:
         raise SystemExit("\n".join(errors))
-    print(summary(data) if args.summary else "camera-ready result registry: valid")
+    print(summary(data) if args.summary else "study result registry: valid")
 
 
 if __name__ == "__main__":

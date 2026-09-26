@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Aggregate identifier-free outputs from the camera-ready analyses.
+"""Aggregate identifier-free outputs from the reference analyses.
 
 The script never treats optimizer seeds as independent test observations.
 Partial training fractions are first averaged over optimizer seeds within each

@@ -1,4 +1,4 @@
-# Reproducing the camera-ready analysis
+# Reproducing the reference study
 
 ## 1. Environment and data
 
@@ -106,11 +106,11 @@ shown above. Each completed run directory contains a `COMPLETE` marker.
 ```bash
 python scripts/run_analysis.py aggregate /private/runs \
   --output /private/runs/aggregate.json
-python verify_paper.py
+python verify_results.py
 pytest -q
 ```
 
 Compare the identifier-free aggregate with
-`results/medai2026-camera-ready.json`. Optimizer seeds, patient partitions, and
+`results/study-results.json`. Optimizer seeds, patient partitions, and
 patient-subsample chains are distinct variation axes and are not pooled as
 independent observations.
