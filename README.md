@@ -42,6 +42,12 @@ The learned-minus-structured difference is +0.0353 for pointing accuracy
 `p=0.8417`). Exact values and estimator definitions are stored in
 [`results/study-results.json`](results/study-results.json).
 
+The `structured-comparison` analysis reconstructs every deterministic row of
+Tables I and II and fails if its rounded results differ from the registry. The
+`primary` analysis independently repeats lookback selection, trains all five
+optimizer seeds for both learned queries, and performs the reported
+patient-cluster inference.
+
 ## Project structure
 
 ```text

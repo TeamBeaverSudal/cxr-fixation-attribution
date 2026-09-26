@@ -2,6 +2,8 @@
 
 import re
 
+import numpy as np
+
 from finding_level_gaze_targets.data import reflacx
 
 
@@ -114,3 +116,44 @@ def label_windows(sentences, label):
             previous_start = sentences[index - 1][1] if index else start
             windows.append((max(start - LOOKBACK, previous_start), end))
     return windows
+
+
+def reconstruct_base_mentions(transcript_path, label):
+    """Recover unclipped positive-mention sentence bounds from a raw transcript."""
+    import pandas as pd
+
+    expression = KEYWORDS.get(label)
+    if not expression:
+        return []
+    matcher = re.compile(expression, re.I)
+    sentences = sentences_with_words(pd.read_csv(transcript_path))
+    output = []
+    for index, (text, start, end, _words) in enumerate(sentences):
+        if matcher.search(text) and not NEG.search(text):
+            previous_start = sentences[index - 1][1] if index else start
+            output.append((previous_start, start, end))
+    return output
+
+
+def apply_lookback(base_mentions, seconds):
+    """Apply a clipped pre-mention lookback to reconstructed sentence bounds."""
+    return [
+        (max(start - seconds, previous_start), start, end)
+        for previous_start, start, end in base_mentions
+    ]
+
+
+def assert_cached_lookback(cached_mentions, base_mentions, seconds=LOOKBACK):
+    """Fail when raw-transcript reconstruction disagrees with the study cache."""
+    cached = [
+        tuple(float(value) for value in mention[:3]) for mention in cached_mentions
+    ]
+    rebuilt = [
+        tuple(float(value) for value in mention)
+        for mention in apply_lookback(base_mentions, seconds)
+    ]
+    if len(cached) != len(rebuilt) or any(
+        not np.allclose(left, right, atol=1e-6)
+        for left, right in zip(cached, rebuilt)
+    ):
+        raise RuntimeError("raw mention reconstruction mismatch")

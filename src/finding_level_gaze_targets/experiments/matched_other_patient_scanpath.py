@@ -20,8 +20,16 @@ import numpy as np
 from scipy.ndimage import zoom
 from scipy.stats import wilcoxon
 
-from finding_level_gaze_targets.maps.core import EVAL_RES, TUNE_SIGMAS, iou, pointing, raster, tune_thresholds, word_feat
 from finding_level_gaze_targets.baselines.anatomy import split
+from finding_level_gaze_targets.maps.core import (
+    EVAL_RES,
+    TUNE_SIGMAS,
+    iou,
+    pointing,
+    raster,
+    tune_thresholds,
+    word_feat,
+)
 from finding_level_gaze_targets.models.selector import blur_norm, predict_raw, train_model
 from finding_level_gaze_targets.settings import FUSION, POSITION_ENCODING
 

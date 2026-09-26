@@ -18,17 +18,31 @@ from __future__ import annotations
 
 import argparse
 import math
-import re
 
 import numpy as np
-import pandas as pd
-
-from finding_level_gaze_targets.data import reflacx as gr
-from finding_level_gaze_targets.maps.core import EVAL_RES, TUNE_SIGMAS, iou, pointing, raster, tune_thresholds, word_feat
-from finding_level_gaze_targets.linking.rules import KEYWORDS, NEG, sentences_with_words
-from finding_level_gaze_targets.baselines.structured import b1_scan_heat, modulate, word_dirs
 from scipy.ndimage import zoom
+
 from finding_level_gaze_targets.baselines.anatomy import label_prior, split
+from finding_level_gaze_targets.baselines.structured import (
+    apply_directional_terms,
+    combined_structured_heat,
+    directional_statistics,
+)
+from finding_level_gaze_targets.data import reflacx as gr
+from finding_level_gaze_targets.linking.rules import (
+    apply_lookback,
+    assert_cached_lookback,
+    reconstruct_base_mentions,
+)
+from finding_level_gaze_targets.maps.core import (
+    EVAL_RES,
+    TUNE_SIGMAS,
+    iou,
+    pointing,
+    raster,
+    tune_thresholds,
+    word_feat,
+)
 from finding_level_gaze_targets.models.selector import blur_norm, predict_raw, train_model
 from finding_level_gaze_targets.settings import FUSION, POSITION_ENCODING
 
@@ -109,30 +123,9 @@ def _nested_patient_subset(train, fraction, subset_seed):
     return [item for item in train if item[6] in selected], keep_n, len(patients)
 
 
-def _base_mentions(transcript, label):
-    pattern = KEYWORDS.get(label)
-    if not pattern:
-        return []
-    matcher = re.compile(pattern, re.I)
-    sentences = sentences_with_words(pd.read_csv(transcript))
-    output = []
-    for index, (text, start, end, _words) in enumerate(sentences):
-        if matcher.search(text) and not NEG.search(text):
-            previous_start = sentences[index - 1][1] if index else start
-            output.append((previous_start, start, end))
-    return output
-
-
-def _gate(base_mentions, lookback):
-    return [
-        (max(start - lookback, previous_start), start, end)
-        for previous_start, start, end in base_mentions
-    ]
-
-
 def _combined_structured(training, validation, test, validation_targets, test_targets):
     prior = label_prior((item[2], item[5]) for item in training)
-    directions = word_dirs(training)
+    directions = directional_statistics(training)
     modulated = {}
 
     def masks(items):
@@ -141,7 +134,9 @@ def _combined_structured(training, validation, test, validation_targets, test_ta
             mask = prior.get(item[5])
             if mask is not None:
                 key = (item[5], tuple(item[4][[0, 1, 3, 4]]))
-                mask = modulated.setdefault(key, modulate(mask, item[4], directions))
+                mask = modulated.setdefault(
+                    key, apply_directional_terms(mask, item[4], directions)
+                )
             output.append(mask)
         return output
 
@@ -152,7 +147,9 @@ def _combined_structured(training, validation, test, validation_targets, test_ta
         validation_maps = [
             (
                 lambda sigma, item=item, mask=mask, lookback=lookback:
-                b1_scan_heat(item[0], _gate(item[7], lookback), mask, sigma)
+                combined_structured_heat(
+                    item[0], apply_lookback(item[7], lookback), mask, sigma
+                )
             )
             for item, mask in zip(validation, validation_masks)
         ]
@@ -167,7 +164,9 @@ def _combined_structured(training, validation, test, validation_targets, test_ta
     test_maps = [
         (
             lambda sigma, item=item, mask=mask:
-            b1_scan_heat(item[0], _gate(item[7], lookback), mask, sigma)
+            combined_structured_heat(
+                item[0], apply_lookback(item[7], lookback), mask, sigma
+            )
         )
         for item, mask in zip(test, test_masks)
     ]
@@ -238,21 +237,13 @@ def run(cache, raw_root, epochs, subset_seed, model_seed, fractions, nboot,
             for item in record["labels"]:
                 if not item["mentions"]:
                     continue
-                base = _base_mentions(transcript, item["label"]) if reconstruct else None
+                base = (
+                    reconstruct_base_mentions(transcript, item["label"])
+                    if reconstruct
+                    else None
+                )
                 if reconstruct:
-                    cached = [
-                        tuple(float(value) for value in mention[:3])
-                        for mention in item["mentions"]
-                    ]
-                    rebuilt = [
-                        tuple(float(value) for value in mention)
-                        for mention in _gate(base, 1.5)
-                    ]
-                    if len(cached) != len(rebuilt) or any(
-                        not np.allclose(left, right, atol=1e-6)
-                        for left, right in zip(cached, rebuilt)
-                    ):
-                        raise RuntimeError("raw mention reconstruction mismatch")
+                    assert_cached_lookback(item["mentions"], base)
                 output.append(
                     (
                         record["fix"],
@@ -296,7 +287,14 @@ def run(cache, raw_root, epochs, subset_seed, model_seed, fractions, nboot,
 
         structured = None
         if not skip_structured:
-            structured, lookback, s_sigma, s_threshold, s_val_iou, prior_labels = _combined_structured(
+            (
+                structured,
+                lookback,
+                s_sigma,
+                s_threshold,
+                s_val_iou,
+                prior_labels,
+            ) = _combined_structured(
                 selected, validation, test, validation_targets, test_targets
             )
             print(

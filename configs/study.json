@@ -31,6 +31,16 @@
     "patient_partitions": "complete_five_seed_pipeline_per_partition_kept_separate",
     "training_fraction": "five_optimizer_seeds_within_each_of_five_patient_subsample_chains"
   },
+  "analysis_entry_points": {
+    "structured_comparison": "structured-comparison",
+    "primary_inference": "primary",
+    "feature_controls": "feature-controls",
+    "record_substitution": "record-substitution",
+    "training_fraction": "training-fraction",
+    "architecture_selection": "architecture-selection",
+    "linker_audit": "linker-audit",
+    "strict_aggregation": "aggregate"
+  },
   "result_registry": "results/study-results.json",
   "execution_provenance": {
     "deployment_commit": "45ada8abc9b7e3ec98b37b4dcb58f0521c67cef8",

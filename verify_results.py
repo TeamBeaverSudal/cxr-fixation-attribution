@@ -80,7 +80,9 @@ EXPECTED = {
     "table_4.optimizer_seeds_per_chain": 5,
     "execution_provenance.deployment_commit": "45ada8abc9b7e3ec98b37b4dcb58f0521c67cef8",
     "execution_provenance.deployment_commit_scope": "private_execution_repository",
-    "execution_provenance.strict_aggregate_sha256": "e8e54ebc4ad4d83cef88bfd18c487b94267c9b78c85d6982262bf6f48758a71a",
+    "execution_provenance.strict_aggregate_sha256": (
+        "e8e54ebc4ad4d83cef88bfd18c487b94267c9b78c85d6982262bf6f48758a71a"
+    ),
 }
 
 EXPECTED_TABLE_1 = [
@@ -151,7 +153,11 @@ def validate_registry(data):
         except (KeyError, IndexError, TypeError) as exc:
             failures.append(f"missing {path}: {exc}")
             continue
-        passed += require(observed == expected, f"{path}: {observed!r} != {expected!r}", failures)
+        passed += require(
+            observed == expected,
+            f"{path}: {observed!r} != {expected!r}",
+            failures,
+        )
 
     got = [(r["method"], r["pointing"], r["iou"]) for r in data.get("table_1", [])]
     passed += require(got == EXPECTED_TABLE_1, "structured/learned comparison changed", failures)
@@ -160,32 +166,70 @@ def validate_registry(data):
         (r["lookback_seconds"], r["validation_iou"], r["test_pointing"], r["test_iou"])
         for r in data.get("table_2", [])
     ]
-    passed += require(got == EXPECTED_TABLE_2, "Table II does not match the completed lookback sweep", failures)
+    passed += require(
+        got == EXPECTED_TABLE_2,
+        "Table II does not match the completed lookback sweep",
+        failures,
+    )
     if got:
         selected = max(got, key=lambda row: row[1])[0]
-        passed += require(selected == 3.0, f"validation IoU selects {selected}, not 3.0 s", failures)
+        passed += require(
+            selected == 3.0,
+            f"validation IoU selects {selected}, not 3.0 s",
+            failures,
+        )
 
     got = [(r["condition"], r["pointing"], r["iou"]) for r in data.get("table_3", [])]
-    passed += require(got == EXPECTED_TABLE_3, "Table III does not match the five-seed feature controls", failures)
+    passed += require(
+        got == EXPECTED_TABLE_3,
+        "Table III does not match the five-seed feature controls",
+        failures,
+    )
 
     got = [
-        (r["fraction"], r["learned_pointing"], r["structured_pointing"], r["learned_iou"], r["structured_iou"])
+        (
+            r["fraction"],
+            r["learned_pointing"],
+            r["structured_pointing"],
+            r["learned_iou"],
+            r["structured_iou"],
+        )
         for r in data.get("table_4", {}).get("rows", [])
     ]
-    passed += require(got == EXPECTED_TABLE_4, "Table IV does not match the strict training-fraction aggregate", failures)
+    passed += require(
+        got == EXPECTED_TABLE_4,
+        "Table IV does not match the strict training-fraction aggregate",
+        failures,
+    )
     for row in data.get("table_4", {}).get("rows", []):
-        passed += require(set(row["selected_lookbacks"]) == {3}, f"fraction {row['fraction']} did not select only 3.0 s", failures)
+        passed += require(
+            set(row["selected_lookbacks"]) == {3},
+            f"fraction {row['fraction']} did not select only 3.0 s",
+            failures,
+        )
 
     got = [
         (r["partition"], r["test_instances"], r["delta_pointing"], r["delta_iou"])
         for r in data.get("patient_partitions", [])
     ]
-    passed += require(got == EXPECTED_PARTITIONS, "patient partitions do not match the five-seed aggregate", failures)
+    passed += require(
+        got == EXPECTED_PARTITIONS,
+        "patient partitions do not match the five-seed aggregate",
+        failures,
+    )
     for row in data.get("patient_partitions", []):
-        passed += require(row.get("optimizer_seeds") == 5, f"partition {row.get('partition')} is not a five-seed run", failures)
+        passed += require(
+            row.get("optimizer_seeds") == 5,
+            f"partition {row.get('partition')} is not a five-seed run",
+            failures,
+        )
 
     hashes = data.get("execution_provenance", {}).get("executed_source_sha256", {})
-    passed += require(len(hashes) == 4 and all(len(v) == 64 for v in hashes.values()), "execution source hashes are incomplete", failures)
+    passed += require(
+        len(hashes) == 4 and all(len(v) == 64 for v in hashes.values()),
+        "execution source hashes are incomplete",
+        failures,
+    )
     return passed, failures
 
 
@@ -193,7 +237,11 @@ def validate_pdf(pdf_path):
     failures = []
     passed = 0
     digest = hashlib.sha256(pdf_path.read_bytes()).hexdigest()
-    passed += require(digest == ASSOCIATED_PDF_SHA256, f"PDF SHA-256 {digest} != associated publication hash", failures)
+    passed += require(
+        digest == ASSOCIATED_PDF_SHA256,
+        f"PDF SHA-256 {digest} != associated publication hash",
+        failures,
+    )
 
     pdftotext = shutil.which("pdftotext")
     if pdftotext is None:
@@ -201,7 +249,11 @@ def validate_pdf(pdf_path):
         return passed, failures
     with tempfile.TemporaryDirectory(prefix="medai-pdf-") as tmp:
         output = Path(tmp) / "paper.txt"
-        proc = subprocess.run([pdftotext, str(pdf_path), str(output)], capture_output=True, text=True)
+        proc = subprocess.run(
+            [pdftotext, str(pdf_path), str(output)],
+            capture_output=True,
+            text=True,
+        )
         if proc.returncode:
             failures.append(f"pdftotext failed: {proc.stderr.strip()}")
             return passed, failures
@@ -238,7 +290,11 @@ def main():
     parser.add_argument("--pdf", type=Path)
     parser.add_argument("--tex", type=Path)
     parser.add_argument("--bibliography", type=Path)
-    parser.add_argument("--all", action="store_true", help="compatibility alias; the complete contract is always checked")
+    parser.add_argument(
+        "--all",
+        action="store_true",
+        help="compatibility alias; the complete contract is always checked",
+    )
     args = parser.parse_args()
 
     data = json.loads(args.results.read_text())

@@ -15,9 +15,24 @@ import argparse
 import numpy as np
 from scipy.ndimage import zoom
 
-from finding_level_gaze_targets.maps.core import EVAL_RES, TUNE_SIGMAS, align_feats, iou, pointing, raster, tune_thresholds, word_feat
 from finding_level_gaze_targets.baselines.anatomy import split
-from finding_level_gaze_targets.models.selector import _raw_grid, blur_norm, pos_feat, predict_raw, train_model
+from finding_level_gaze_targets.maps.core import (
+    EVAL_RES,
+    TUNE_SIGMAS,
+    align_feats,
+    iou,
+    pointing,
+    raster,
+    tune_thresholds,
+    word_feat,
+)
+from finding_level_gaze_targets.models.selector import (
+    _raw_grid,
+    blur_norm,
+    pos_feat,
+    predict_raw,
+    train_model,
+)
 from finding_level_gaze_targets.settings import FUSION, POSITION_ENCODING
 
 POS_MODE = POSITION_ENCODING
@@ -57,7 +72,14 @@ def _score(raw_maps, targets, sigma, threshold):
     heatmaps = [blur_norm(raw, sigma) for raw in raw_maps]
     return (
         float(np.nanmean([pointing(heat, target) for heat, target in zip(heatmaps, targets)])),
-        float(np.nanmean([iou(heat, target, threshold) for heat, target in zip(heatmaps, targets)])),
+        float(
+            np.nanmean(
+                [
+                    iou(heat, target, threshold)
+                    for heat, target in zip(heatmaps, targets)
+                ]
+            )
+        ),
     )
 
 
@@ -83,7 +105,11 @@ def run(cache, epochs, seed):
     train, validation, test = (instances(name) for name in ("train", "val", "test"))
     targets_validation = [raster(item[2]) for item in validation]
     targets_test = [raster(item[2]) for item in test]
-    print(f"COHORT seed={seed} train={len(train)} val={len(validation)} test={len(test)}", flush=True)
+    print(
+        f"COHORT seed={seed} train={len(train)} val={len(validation)} "
+        f"test={len(test)}",
+        flush=True,
+    )
 
     network = train_model(
         train, labels, use_position=True, epochs=epochs, use_text=True,

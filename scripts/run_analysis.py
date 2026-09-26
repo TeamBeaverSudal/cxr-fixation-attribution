@@ -9,6 +9,7 @@ import sys
 
 
 ANALYSES = {
+    "structured-comparison": "finding_level_gaze_targets.experiments.structured_comparison",
     "primary": "finding_level_gaze_targets.experiments.strongest_window_inference",
     "feature-controls": "finding_level_gaze_targets.experiments.refined_within_record_controls",
     "record-substitution": "finding_level_gaze_targets.experiments.matched_other_patient_scanpath",

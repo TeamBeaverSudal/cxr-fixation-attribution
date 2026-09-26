@@ -257,8 +257,8 @@ def pointing(heatmap, target):
     return float(target[np.unravel_index(np.argmax(upscaled), upscaled.shape)])
 
 
-def b1_at(fixations, mentions, sigma):
-    """Render the fixed-window temporal baseline at a specified bandwidth."""
+def temporal_window_heat(fixations, mentions, sigma):
+    """Render duration-weighted fixations inside the finding's temporal window."""
     start = fixations[:, 2] - fixations[:, 3] / 2
     end = fixations[:, 2] + fixations[:, 3] / 2
     if mentions:
@@ -273,10 +273,6 @@ def b1_at(fixations, mentions, sigma):
                 sigma,
             )
     return splat(fixations[:, 0], fixations[:, 1], fixations[:, 3], sigma)
-
-
-def b1_heat(fixations, mentions):
-    return b1_at(fixations, mentions, sigma=1.5)
 
 
 def word_feat(mention_text):

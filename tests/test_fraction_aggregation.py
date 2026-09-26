@@ -2,7 +2,9 @@ from pathlib import Path
 
 import pytest
 
-from finding_level_gaze_targets.experiments.summarize_annotation_fraction import aggregate
+from finding_level_gaze_targets.experiments.summarize_consistent_runs import (
+    fraction_summary,
+)
 
 
 def populate(root: Path) -> None:
@@ -32,14 +34,10 @@ def populate(root: Path) -> None:
 
 def test_crossed_fraction_aggregation(tmp_path):
     populate(tmp_path)
-    result = aggregate(tmp_path)
-    assert result["status"] == "complete"
-    assert result["design"]["aggregation_order"] == (
-        "optimizer_seeds_within_chain_then_patient_chains"
-    )
-    assert result["fractions"]["0.10"]["learned"]["pg"]["n"] == 5
-    assert result["fractions"]["1.00"]["learned"]["pg"]["n"] == 1
-    assert result["fractions"]["0.50"]["structured"][
+    result = fraction_summary(tmp_path)
+    assert result["0.10"]["learned"]["pg"]["n"] == 5
+    assert result["1.00"]["learned"]["pg"]["n"] == 1
+    assert result["0.50"]["structured"][
         "selected_lookback_seconds"
     ]["by_patient_subset"] == [3.0] * 5
 
@@ -49,4 +47,4 @@ def test_missing_completion_marker_fails_closed(tmp_path):
     marker = tmp_path / "training-fraction" / "subset-4" / "seed-4" / "COMPLETE"
     marker.unlink()
     with pytest.raises(RuntimeError, match="run is not complete"):
-        aggregate(tmp_path)
+        fraction_summary(tmp_path)
