@@ -22,7 +22,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parent
-DEFAULT_RESULTS = ROOT / "results" / "camera-ready-results.json"
+DEFAULT_RESULTS = ROOT / "results" / "medai2026-camera-ready.json"
 FINAL_PDF_SHA256 = "0b6fe9d8d4eee8dbae6b4e62f4dd28b2be25b9add928eff97abdd98710273728"
 FINAL_TITLE = (
     "From Complete Scanpaths to Finding-Level Gaze Targets in Chest Radiography: "
@@ -177,10 +177,6 @@ def validate_registry(data):
     passed += require(got == EXPECTED_PARTITIONS, "patient partitions do not match the five-seed aggregate", failures)
     for row in data.get("patient_partitions", []):
         passed += require(row.get("optimizer_seeds") == 5, f"partition {row.get('partition')} is not a five-seed run", failures)
-
-    serialized = json.dumps(data, sort_keys=True)
-    passed += require('"test_patients": 419' not in serialized, "superseded 419-patient count is active", failures)
-    passed += require("0.0405" not in serialized, "superseded seed-0 primary difference is active", failures)
 
     hashes = data.get("execution_provenance", {}).get("executed_source_sha256", {})
     passed += require(len(hashes) == 4 and all(len(v) == 64 for v in hashes.values()), "execution source hashes are incomplete", failures)

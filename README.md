@@ -1,98 +1,82 @@
-# From Complete Scanpaths to Finding-Level Gaze Targets in Chest Radiography
+# Finding-Level Gaze Targets
 
-Code and publication-safe artifacts for **“From Complete Scanpaths to
+Official code and publication-safe artifacts for **“From Complete Scanpaths to
 Finding-Level Gaze Targets in Chest Radiography: Structured Cues and Learned
 Reweighting,”** accepted at IEEE MedAI 2026.
 
-The study constructs a finding-specific gaze target from a radiologist's
-complete REFLACX scanpath. A structured selector and a learned selector assign
-weights to the same recorded fixations; the shared renderer turns those weights
-into localization maps. No patient data, derived cache, model checkpoint, or
-case identifier is distributed here.
+The project assigns finding-specific weights to the fixations in a completed
+radiology scanpath and renders them as a localization map. It compares a
+structured selector with learned reweighting under the same rendering,
+calibration, and patient-disjoint evaluation protocol. Image pixels are not
+selector inputs.
 
-## Camera-ready result contract
+## Camera-ready result
 
-The camera-ready analysis uses 987 mention-linked test instances from 398
-patients. Learned results average optimizer seeds 0--4 per instance before
-paired inference. The structured reference uses the 3.0-s lookback selected by
-validation IoU.
+The fixed test cohort contains 987 mention-linked finding instances from 398
+patients. Learned metrics are averaged over optimizer seeds 0--4 for each
+instance before paired inference.
 
 | Method | Pointing accuracy | IoU |
 |---|---:|---:|
-| Validation-selected structured baseline | 0.7893 | 0.3549 |
-| Ten-indicator learned selector, five-seed mean | 0.8245 | 0.3584 |
+| Validation-selected 3.0-s structured baseline | 0.7893 | 0.3549 |
+| Ten-indicator learned selector | 0.8245 | 0.3584 |
 
 The learned-minus-structured difference is +0.0353 for pointing accuracy
 (patient-cluster bootstrap 95% CI +0.0067 to +0.0634; patient-mean signed-rank
 `p=0.0767`) and +0.0035 for IoU (95% CI -0.0034 to +0.0102;
-`p=0.8417`). These summaries use different weighting: the bootstrap targets the
-instance-weighted mean while the signed-rank sensitivity gives each patient
-equal weight.
+`p=0.8417`). The complete exact-valued registry is
+[`results/medai2026-camera-ready.json`](results/medai2026-camera-ready.json).
 
-The complete exact-valued contract is
-[`results/camera-ready-results.json`](results/camera-ready-results.json).
-[`docs/RESULT_CONTRACT.md`](docs/RESULT_CONTRACT.md) maps every camera-ready
-table and quantitative statement to that file. The old 419-patient,
-single-seed-inference, and Table-V values belong to a superseded submitted
-analysis and are not camera-ready results.
-
-## Repository map
+## Project structure
 
 ```text
-core.py, selector.py              shared representation and learned selector
-structured_baselines.py          anatomical, scanpath, directional, temporal baselines
-evaluate.py                      feature controls and seed-specific evaluation
-experiments/                     camera-ready five-seed analyses and strict aggregation
-results/camera-ready-results.json publication-safe final aggregate contract
-docs/RESULT_CONTRACT.md           paper-to-artifact mapping and rounding rules
-docs/REPRODUCIBILITY.md           end-to-end commands and variation axes
-docs/PROVENANCE.md                executed jobs, source hashes, and audit boundary
-verify_paper.py                   offline contract and optional PDF consistency check
+configs/medai2026.json                 frozen cohort and estimator configuration
+src/finding_level_gaze_targets/
+  data/                                REFLACX file adapters
+  linking/                             positive-mention and temporal alignment
+  maps/                                fixation features, rendering, and metrics
+  baselines/                           anatomical and structured selectors
+  models/                              learned fixation reweighting
+  experiments/                         reported analyses and strict aggregation
+  reporting/                           result-registry validation and summary
+scripts/run_analysis.py                single analysis entry point
+results/medai2026-camera-ready.json     final publication-safe aggregate
+tests/                                 data-free contract and aggregation tests
+docs/RESULTS.md                        paper-to-result mapping
+docs/REPRODUCIBILITY.md                end-to-end execution protocol
+docs/PROVENANCE.md                     executed source and job identities
+verify_paper.py                        final registry and optional PDF check
 ```
 
-## Verify the released contract
-
-This check is data-free and verifies the frozen aggregate against an independent
-set of camera-ready expectations, including cohort sizes, Tables I--IV, paired
-inference, record substitution, all five patient partitions, and the
-training-fraction design:
+## Install and verify
 
 ```bash
+python -m venv .venv
+. .venv/bin/activate
+pip install -e '.[dev]'
 python verify_paper.py
+finding-level-gaze-results --summary
+pytest -q
 ```
 
-If a local copy of the camera-ready PDF is available, also check its title and
-all printed quantitative tokens:
+With a local copy of the final PDF:
 
 ```bash
 python verify_paper.py --pdf /path/to/medai_final.pdf
 ```
 
-The optional PDF check uses `pdftotext`. Contract validation is not a substitute
-for rerunning the models from credentialed source data; the commands and exact
-aggregation order for that audit are in
+The data-free checks validate the frozen result contract. Recomputing model
+outputs requires credentialed REFLACX/MIMIC-CXR access and follows
 [`docs/REPRODUCIBILITY.md`](docs/REPRODUCIBILITY.md).
 
 ## Data boundary
 
-REFLACX Phase 3 and MIMIC-CXR are available through PhysioNet under
-credentialed access. Extraction expects a REFLACX root with the released gaze,
-fixation, ellipse, and timestamped-transcription files. Keep raw data, caches,
-patient-level predictions, qualitative radiographs, and checkpoints outside
-Git.
+REFLACX 1.0.0 and MIMIC-CXR 2.0.0 are distributed by PhysioNet under
+credentialed access. This repository contains no raw images, reports, patient
+identifiers, derived caches, patient-level predictions, model checkpoints, or
+qualitative radiographs.
 
-## Installation
-
-```bash
-python -m venv .venv
-. .venv/bin/activate
-pip install -r requirements.txt
-python structured_baselines.py --selfcheck
-python linker_and_temporal.py
-python verify_paper.py
-```
-
-The execution used NumPy 1.26.4 and Python/PyTorch tooling compatible with the
-versions listed in `requirements.txt`. The historical environment was not
-preserved as a byte-identical lock; source hashes and completed job identities
-are therefore part of the provenance record.
+The stable camera-ready snapshot is tagged `medai2026-camera-ready`. The GitHub
+repository slug remains `cxr-fixation-attribution` so the URL printed in the
+paper remains valid; the project and Python package names follow the final
+paper's finding-level gaze-target terminology.

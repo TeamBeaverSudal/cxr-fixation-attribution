@@ -1,0 +1,36 @@
+{
+  "study_id": "medai2026-finding-level-gaze-targets",
+  "title": "From Complete Scanpaths to Finding-Level Gaze Targets in Chest Radiography: Structured Cues and Learned Reweighting",
+  "setting": "offline_complete_scanpath",
+  "task": "finding_conditioned_fixation_reweighting_and_localization_map_construction",
+  "dataset": {
+    "reflacx_version": "1.0.0",
+    "mimic_cxr_version": "2.0.0",
+    "phase": 3
+  },
+  "cohorts": {
+    "resolved_train": 1895,
+    "resolved_validation": 547,
+    "resolved_test": 987,
+    "test_patients": 398,
+    "linker_coverage_denominator": 1093,
+    "record_substitution_eligible": 948
+  },
+  "evaluation": {
+    "split_unit": "patient",
+    "primary_split_seed": 0,
+    "patient_partition_seeds": [0, 1, 2, 3, 4],
+    "optimizer_seeds": [0, 1, 2, 3, 4],
+    "bootstrap_unit": "patient",
+    "bootstrap_resamples": 10000,
+    "confidence_level": 0.95,
+    "metrics": ["pointing_game_accuracy", "iou"]
+  },
+  "aggregation": {
+    "learned_test_summary": "mean_seed_specific_metrics_per_instance_after_seed_specific_validation_calibration",
+    "patient_partitions": "complete_five_seed_pipeline_per_partition_kept_separate",
+    "training_fraction": "five_optimizer_seeds_within_each_of_five_patient_subsample_chains"
+  },
+  "result_registry": "results/medai2026-camera-ready.json",
+  "deployment_commit": "45ada8abc9b7e3ec98b37b4dcb58f0521c67cef8"
+}

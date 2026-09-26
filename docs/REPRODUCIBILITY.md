@@ -1,115 +1,116 @@
 # Reproducing the camera-ready analysis
 
-## Data and cache
-
-Obtain REFLACX 1.0.0 and MIMIC-CXR through PhysioNet under the applicable data
-use agreement. Do not place raw files or the derived cache in this repository.
-
-Build the historical cache with the released linker, then retain the raw
-timestamped transcripts because the 0.5--3.0-s lookback sweep reconstructs
-sentence boundaries that are not fully represented in the original 1.5-s
-cache.
+## 1. Environment and data
 
 ```bash
-python core.py /path/to/reflacx --cache /private/path/align.pt
+python -m venv .venv
+. .venv/bin/activate
+pip install -e '.[dev]'
 ```
 
-The 1.5-s reconstruction must match the cached mentions before any extended
-window result is accepted.
+Obtain REFLACX 1.0.0 and MIMIC-CXR 2.0.0 through PhysioNet. Keep raw files and
+derived artifacts outside the repository.
 
-## Primary comparison and patient partitions
-
-The primary run trains seeds 0--4, calibrates every learned model on validation,
-selects the structured lookback using validation IoU, averages learned outcomes
-per test instance, and then performs patient-cluster inference.
+Build the cache with the released linker:
 
 ```bash
-python experiments/strongest_window_inference.py \
+python -m finding_level_gaze_targets.maps.core \
+  /path/to/reflacx --cache /private/path/align.pt
+```
+
+The extended-window analyses also require the raw timestamped transcripts. The
+rebuilt 1.5-s mention windows must match the cache before longer lookbacks are
+evaluated.
+
+## 2. Primary comparison
+
+```bash
+python scripts/run_analysis.py primary \
   --cache /private/path/align.pt \
   --raw-root /path/to/reflacx \
   --epochs 40 --seeds 0,1,2,3,4 --split-seed 0
 ```
 
-Repeat the same complete five-seed command for every patient partition. Do not
-replace partitions 1--4 with a seed-0-only run.
+This run trains the ten- and four-indicator selectors, calibrates each learned
+seed on validation, selects the structured lookback using validation IoU, and
+performs patient-cluster inference after per-instance seed averaging.
+
+## 3. Patient partitions
+
+Repeat the full five-seed pipeline for all five partitions:
 
 ```bash
 for p in 0 1 2 3 4; do
-  python experiments/strongest_window_inference.py \
+  out="/private/runs/patient-partitions/split-$p"
+  mkdir -p "$out"
+  python scripts/run_analysis.py primary \
     --cache /private/path/align.pt \
     --raw-root /path/to/reflacx \
     --epochs 40 --seeds 0,1,2,3,4 --split-seed "$p" \
-    --models full
+    --models full > "$out/run.log"
+  touch "$out/COMPLETE"
 done
 ```
 
-Keep partition outputs separate. They overlap in patient membership and are a
-directional sensitivity analysis, not five independent replications.
+Partitions overlap in patient membership and remain separate sensitivity
+analyses.
 
-## Record substitution
-
-Donor ordering is fixed independently of optimizer initialization. Every seed
-must retain the same 948-instance / 389-patient eligible cohort.
+## 4. Record and feature controls
 
 ```bash
-python experiments/matched_other_patient_scanpath.py \
+python scripts/run_analysis.py record-substitution \
   --cache /private/path/align.pt --epochs 40 \
   --seeds 0,1,2,3,4 --split-seed 0 \
   --donor-ranking-seed 20260818
-```
 
-## Feature controls
-
-Run the selector and all controls on the fixed primary cohort for seeds 0--4.
-Evaluation-time perturbations retain the original output coordinates and reuse
-the ten-indicator selector's calibration.
-
-```bash
 for s in 0 1 2 3 4; do
-  python evaluate.py --cache /private/path/align.pt \
-    --epochs 40 --seed "$s" --split-seed 0
+  python scripts/run_analysis.py feature-controls \
+    --cache /private/path/align.pt --epochs 40 --seed "$s"
 done
 ```
 
-`experiments/refined_within_record_controls.py` is the compact executed-analysis
-entry point for the same control definitions.
+Donor ordering is independent of optimizer initialization. The feature-control
+run trains both the ten-indicator selector and the finding-plus-temporal model.
+Evaluation-time feature perturbations retain the original output coordinates
+and reuse the ten-indicator selector's calibration.
 
-## Training-size sensitivity
-
-The partial fractions cross five nested patient-subsample chains with five
-optimizer seeds: 25 learned runs at each requested partial-fraction set. Average
-optimizer seeds within each chain, then average the five chain means. The
-structured result is deterministic within a retained patient set and must be
-emitted only once, not replicated five times.
+## 5. Training-size sensitivity
 
 ```bash
 for subset in 0 1 2 3 4; do
   for model in 0 1 2 3 4; do
+    out="/private/runs/training-fraction/subset-$subset/seed-$model"
+    mkdir -p "$out"
     extra=""
     if [ "$model" -ne 0 ]; then extra="--skip-structured"; fi
-    python experiments/annotation_fraction_sensitivity.py \
+    python scripts/run_analysis.py training-fraction \
       --cache /private/path/align.pt \
       --raw-root /path/to/reflacx \
       --subset-seed "$subset" --model-seed "$model" \
-      --fractions 0.10,0.25,0.50 $extra
+      --fractions 0.10,0.25,0.50 $extra > "$out/run.log"
+    touch "$out/COMPLETE"
   done
 done
 ```
 
-The 100% row uses the primary five-seed learned result and the deterministic
-3.0-s structured result. Every partial condition retains the complete
-validation cohort, so this analysis varies training annotation only.
+Structured results are emitted once per retained patient set. Learned seeds are
+averaged within each chain before the five chain means are summarized. The full
+validation cohort is retained at every training fraction.
 
-## Aggregation and acceptance
+## 6. Aggregate and verify
 
-Use `experiments/summarize_consistent_runs.py` on the completed run tree. It
-fails closed if a required seed, patient partition, chain, or completion marker
-is absent. Compare the identifier-free output with
-`results/camera-ready-results.json`, then run:
+Store the primary log under `/private/runs/primary/`, the record-substitution
+log under `/private/runs/record-substitution/`, and use the directory layouts
+shown above. Each completed run directory contains a `COMPLETE` marker.
 
 ```bash
+python scripts/run_analysis.py aggregate /private/runs \
+  --output /private/runs/aggregate.json
 python verify_paper.py
+pytest -q
 ```
 
-Optimizer seeds, patient partitions, and patient-subsample chains are distinct
-variation axes. Never pool them as if they were independent observations.
+Compare the identifier-free aggregate with
+`results/medai2026-camera-ready.json`. Optimizer seeds, patient partitions, and
+patient-subsample chains are distinct variation axes and are not pooled as
+independent observations.

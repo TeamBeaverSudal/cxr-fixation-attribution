@@ -12,21 +12,15 @@ commit `45ada8abc9b7e3ec98b37b4dcb58f0521c67cef8`.
 
 The completed strict aggregate has SHA-256
 `e8e54ebc4ad4d83cef88bfd18c487b94267c9b78c85d6982262bf6f48758a71a`.
-The submitted camera-ready PDF reviewed against that aggregate has SHA-256
+The final camera-ready PDF audited against it has SHA-256
 `0b6fe9d8d4eee8dbae6b4e62f4dd28b2be25b9add928eff97abdd98710273728`.
 
-The files under `experiments/` are publication-oriented copies of the executed
-analysis logic. Their imports were renamed to the descriptive module names in
-this repository, so their byte hashes are not expected to equal the deployment
-hashes above. The hashes identify the source that actually ran; the public
-copies expose the corresponding computation for audit and rerun.
-
-The earlier submitted analysis mixed five-seed descriptive rows with seed-0
-paired inference and seed-0 secondary analyses. It was superseded by the
-consistent estimator used here: seed-specific metrics are averaged per instance
-before inference, every patient partition repeats all five seeds, and each
-training-fraction chain averages all five optimizer seeds.
+The public package uses descriptive module and project names, so its file hashes
+differ from the deployed execution snapshot. The table above identifies the
+source files that actually ran; the public modules expose the corresponding
+computations for audit and rerun.
 
 Raw REFLACX/MIMIC-CXR data, patient-level predictions, model checkpoints, and
-qualitative radiographs remain restricted. This repository releases only code,
-aggregate results, configuration logic, and nonidentifying provenance.
+qualitative radiographs remain restricted. The public repository contains only
+code, the frozen configuration, aggregate results, and nonidentifying execution
+provenance.

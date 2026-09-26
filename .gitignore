@@ -6,3 +6,8 @@ align.pt
 runs/
 checkpoints/
 *.pkl
+.pytest_cache/
+*.egg-info/
+build/
+dist/
+.coverage

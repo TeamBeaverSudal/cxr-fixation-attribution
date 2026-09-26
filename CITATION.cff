@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the associated MedAI 2026 paper."
+title: "Finding-Level Gaze Targets"
+type: software
+version: 1.0.0
+date-released: 2026-09-26
+repository-code: "https://github.com/TeamBeaverSudal/cxr-fixation-attribution"
+authors:
+  - family-names: Lee
+    given-names: Sumin
+  - family-names: Go
+    given-names: Hyunsu
+  - family-names: Lee
+    given-names: Subeen
+  - family-names: Kim
+    given-names: Kyeonghun
+  - family-names: Kim
+    given-names: Nam-Joon

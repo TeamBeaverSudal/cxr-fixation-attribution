@@ -1,0 +1,1 @@
+"""Released-data adapters."""
