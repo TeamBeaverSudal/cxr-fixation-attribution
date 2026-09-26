@@ -33,5 +33,6 @@ publication rounds displayed values to three decimals.
 | Qualitative examples | `figure_2` | example-case IoUs; not an inferential sample |
 
 `verify_results.py` checks these fields against independently encoded expected
-values and can also verify the associated publication's exact PDF hash. This
-offline validation does not replace a model rerun from credentialed source data.
+values and can also verify the associated publication's exact PDF, TeX, and
+bibliography hashes. This offline validation does not replace a model rerun
+from credentialed source data.

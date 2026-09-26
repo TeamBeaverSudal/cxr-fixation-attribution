@@ -24,6 +24,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 DEFAULT_RESULTS = ROOT / "results" / "study-results.json"
 ASSOCIATED_PDF_SHA256 = "027380858f8ab5e7d32a7c39cd3b9d085263a8c9e61fa175d344b47f66fc08f4"
+ASSOCIATED_TEX_SHA256 = "53dacc3654e80b8ece8b555d391d74467e3b5b214e8591f621397d5734a26482"
+ASSOCIATED_BIBLIOGRAPHY_SHA256 = "2c829a163c352b3c259523424414a63b5d6f49c87929dae26cb47b3b2c280b79"
 PUBLICATION_TITLE = (
     "From Complete Scanpaths to Finding-Level Gaze Targets in Chest Radiography: "
     "Structured Cues and Learned Reweighting"
@@ -34,8 +36,11 @@ PUBLICATION_TITLE = (
 # result artifact must therefore update an explicit study contract, not merely
 # rewrite the file that the checker reads.
 EXPECTED = {
+    "associated_publication.status": "accepted_camera_ready_candidate",
     "associated_publication.title": PUBLICATION_TITLE,
     "associated_publication.pdf_sha256": ASSOCIATED_PDF_SHA256,
+    "associated_publication.tex_sha256": ASSOCIATED_TEX_SHA256,
+    "associated_publication.bibliography_sha256": ASSOCIATED_BIBLIOGRAPHY_SHA256,
     "associated_publication.pages": 7,
     "estimator.optimizer_seeds": [0, 1, 2, 3, 4],
     "estimator.primary_estimand": "instance_weighted_mean_difference",
@@ -74,6 +79,7 @@ EXPECTED = {
     "table_4.patient_subsample_chains": 5,
     "table_4.optimizer_seeds_per_chain": 5,
     "execution_provenance.deployment_commit": "45ada8abc9b7e3ec98b37b4dcb58f0521c67cef8",
+    "execution_provenance.deployment_commit_scope": "private_execution_repository",
     "execution_provenance.strict_aggregate_sha256": "e8e54ebc4ad4d83cef88bfd18c487b94267c9b78c85d6982262bf6f48758a71a",
 }
 
@@ -216,10 +222,22 @@ def validate_pdf(pdf_path):
     return passed, failures
 
 
+def validate_file_hash(path, expected, label):
+    digest = hashlib.sha256(path.read_bytes()).hexdigest()
+    failures = (
+        []
+        if digest == expected
+        else [f"{label} SHA-256 {digest} != associated publication hash"]
+    )
+    return int(not failures), failures
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--results", type=Path, default=DEFAULT_RESULTS)
     parser.add_argument("--pdf", type=Path)
+    parser.add_argument("--tex", type=Path)
+    parser.add_argument("--bibliography", type=Path)
     parser.add_argument("--all", action="store_true", help="compatibility alias; the complete contract is always checked")
     args = parser.parse_args()
 
@@ -229,6 +247,18 @@ def main():
         pdf_passed, pdf_failures = validate_pdf(args.pdf)
         passed += pdf_passed
         failures.extend(pdf_failures)
+    if args.tex:
+        file_passed, file_failures = validate_file_hash(
+            args.tex, ASSOCIATED_TEX_SHA256, "TeX source"
+        )
+        passed += file_passed
+        failures.extend(file_failures)
+    if args.bibliography:
+        file_passed, file_failures = validate_file_hash(
+            args.bibliography, ASSOCIATED_BIBLIOGRAPHY_SHA256, "bibliography"
+        )
+        passed += file_passed
+        failures.extend(file_failures)
 
     if failures:
         print(f"FAIL: {len(failures)} assertion(s) failed after {passed} passes", file=sys.stderr)

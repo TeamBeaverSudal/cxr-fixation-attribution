@@ -1,7 +1,9 @@
 # Execution provenance
 
 The reference-study aggregate was produced on 2026-08-18 from implementation
-commit `45ada8abc9b7e3ec98b37b4dcb58f0521c67cef8`.
+commit `45ada8abc9b7e3ec98b37b4dcb58f0521c67cef8` in the private execution
+repository. That identifier is an execution-provenance anchor, not a commit in
+this public repository's history.
 
 | Analysis | Completed PBS job | Executed source SHA-256 |
 |---|---|---|
@@ -14,11 +16,16 @@ The completed strict aggregate has SHA-256
 `e8e54ebc4ad4d83cef88bfd18c487b94267c9b78c85d6982262bf6f48758a71a`.
 The associated publication PDF audited against it has SHA-256
 `027380858f8ab5e7d32a7c39cd3b9d085263a8c9e61fa175d344b47f66fc08f4`.
+The corresponding TeX source and bibliography have SHA-256
+`53dacc3654e80b8ece8b555d391d74467e3b5b214e8591f621397d5734a26482`
+and `2c829a163c352b3c259523424414a63b5d6f49c87929dae26cb47b3b2c280b79`,
+respectively.
 
 The public package uses descriptive module and project names, so its file hashes
-differ from the deployed execution snapshot. The table above identifies the
-source files that actually ran; the public modules expose the corresponding
-computations for audit and rerun.
+differ from the private execution snapshot. The table above identifies the
+source files that actually ran; the public modules retain the corresponding
+current computations for audit and rerun. No pre-revision result is part of the
+public result contract.
 
 Raw REFLACX/MIMIC-CXR data, patient-level predictions, model checkpoints, and
 qualitative radiographs remain restricted. The public repository contains only

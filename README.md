@@ -75,10 +75,13 @@ pytest -q
 ```
 
 To verify a local copy of the associated publication against the same frozen
-results:
+results, including its source and bibliography:
 
 ```bash
-python verify_results.py --pdf /path/to/paper.pdf
+python verify_results.py \
+  --pdf /path/to/paper.pdf \
+  --tex /path/to/main.tex \
+  --bibliography /path/to/references.bib
 ```
 
 These data-free checks validate the released aggregate and study invariants.
@@ -97,3 +100,9 @@ qualitative radiographs.
 The reference study accompanies **“From Complete Scanpaths to Finding-Level
 Gaze Targets in Chest Radiography: Structured Cues and Learned Reweighting,”**
 accepted at IEEE MedAI 2026. Citation metadata are provided in `CITATION.cff`.
+
+The current branch contains only the code paths, configuration, aggregate
+results, and documentation used by this paper. Earlier public framing and
+superseded analysis code remain recoverable through version history; manuscript
+snapshots and restricted artifacts stay in private provenance storage rather
+than the release tree.

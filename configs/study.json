@@ -32,5 +32,8 @@
     "training_fraction": "five_optimizer_seeds_within_each_of_five_patient_subsample_chains"
   },
   "result_registry": "results/study-results.json",
-  "deployment_commit": "45ada8abc9b7e3ec98b37b4dcb58f0521c67cef8"
+  "execution_provenance": {
+    "deployment_commit": "45ada8abc9b7e3ec98b37b4dcb58f0521c67cef8",
+    "deployment_commit_scope": "private_execution_repository"
+  }
 }
