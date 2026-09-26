@@ -23,7 +23,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 DEFAULT_RESULTS = ROOT / "results" / "study-results.json"
-ASSOCIATED_PDF_SHA256 = "0b6fe9d8d4eee8dbae6b4e62f4dd28b2be25b9add928eff97abdd98710273728"
+ASSOCIATED_PDF_SHA256 = "027380858f8ab5e7d32a7c39cd3b9d085263a8c9e61fa175d344b47f66fc08f4"
 PUBLICATION_TITLE = (
     "From Complete Scanpaths to Finding-Level Gaze Targets in Chest Radiography: "
     "Structured Cues and Learned Reweighting"
